@@ -1,0 +1,403 @@
+import type { SeedLesson } from './types.js';
+
+export const aiLessons: SeedLesson[] = [
+  {
+    slug: 'rag-explained',
+    title: 'RAG Explained: Retrieval-Augmented Generation',
+    summary:
+      'Why language models hallucinate about your private data, and how retrieving the right context at question time fixes it.',
+    technology: 'rag',
+    tags: ['rag', 'llm', 'embeddings'],
+    difficulty: 'beginner',
+    language: 'en',
+    blocks: [
+      { id: 'problem', type: 'heading', text: 'The problem RAG solves' },
+      {
+        id: 'p-problem',
+        type: 'paragraph',
+        text: "A model only knows what was in its training data. It has never seen your internal wiki, last week's release notes or a customer's contract, and when asked anyway it may confidently invent an answer.",
+      },
+      {
+        id: 'p-idea',
+        type: 'paragraph',
+        text: '**Retrieval-Augmented Generation** adds a step before generation: find the most relevant passages from your own data, put them in the prompt, and ask the model to answer **using only that context**.',
+      },
+      {
+        id: 'pipeline',
+        type: 'diagram',
+        title: 'A RAG request',
+        direction: 'vertical',
+        nodes: [
+          { id: 'q', label: 'User question', tone: 'neutral' },
+          {
+            id: 'embed',
+            label: 'Embed the question',
+            description: 'Text → vector',
+            tone: 'secondary',
+          },
+          {
+            id: 'search',
+            label: 'Vector search',
+            description: 'Top-k similar chunks',
+            tone: 'primary',
+          },
+          {
+            id: 'prompt',
+            label: 'Build prompt',
+            description: 'Question + retrieved context',
+            tone: 'secondary',
+          },
+          { id: 'llm', label: 'LLM answers', description: 'Cites the sources', tone: 'success' },
+        ],
+        edges: [
+          { from: 'q', to: 'embed' },
+          { from: 'embed', to: 'search' },
+          { from: 'search', to: 'prompt' },
+          { from: 'prompt', to: 'llm' },
+        ],
+      },
+      { id: 'phases', type: 'heading', text: 'Two phases: indexing and querying' },
+      {
+        id: 'p-phases',
+        type: 'paragraph',
+        text: 'Indexing happens ahead of time: split documents into chunks, turn each chunk into an embedding vector, and store vectors with metadata. Querying happens per question: embed the question, find the nearest chunks, and generate.',
+      },
+      {
+        id: 'callout-vs-ft',
+        type: 'callout',
+        variant: 'info',
+        title: 'RAG vs fine-tuning',
+        text: 'Fine-tuning changes how a model behaves; RAG changes what it knows at answer time. For frequently changing facts, RAG is usually cheaper, faster to update and easier to audit.',
+      },
+      {
+        id: 'prompt-code',
+        type: 'code',
+        language: 'text',
+        filename: 'prompt template',
+        code: 'Answer the question using ONLY the context below.\nIf the answer is not in the context, say "I don\'t know".\n\nContext:\n[1] {chunk_1}\n[2] {chunk_2}\n\nQuestion: {question}\nAnswer (cite sources like [1]):',
+      },
+      {
+        id: 'warn',
+        type: 'callout',
+        variant: 'warning',
+        text: 'Retrieval quality caps answer quality. If the right chunk is not retrieved, even the best model cannot answer correctly, so evaluate retrieval separately from generation.',
+      },
+      {
+        id: 'quiz',
+        type: 'quiz',
+        question: 'In RAG, what is compared to find relevant chunks?',
+        options: [
+          { id: 'a', text: 'The embedding of the question and the embeddings of the chunks' },
+          { id: 'b', text: 'The file names of the documents' },
+          { id: 'c', text: "The model's training data" },
+        ],
+        correctOptionIds: ['a'],
+        explanation:
+          'Both the question and the chunks are embedded into the same vector space; nearest neighbours are the most semantically similar chunks.',
+      },
+    ],
+  },
+  {
+    slug: 'rag-chunking-embeddings-hinglish',
+    title: 'Chunking aur Embeddings: RAG ki neev',
+    summary:
+      'Documents ko sahi size ke chunks mein kaise todein, overlap kyun zaroori hai, aur embeddings actually kya hote hain. Simple Hinglish mein.',
+    technology: 'rag',
+    tags: ['rag', 'chunking', 'embeddings'],
+    difficulty: 'intermediate',
+    language: 'hinglish',
+    blocks: [
+      { id: 'why-chunk', type: 'heading', text: 'Chunking kyun?' },
+      {
+        id: 'p-why',
+        type: 'paragraph',
+        text: 'Poora 200-page PDF ek saath prompt mein nahi daal sakte. Isliye document ko chhote **chunks** mein todte hain, taaki sirf relevant hisse hi model tak pahunchein.',
+      },
+      {
+        id: 'p-size',
+        type: 'paragraph',
+        text: 'Chunk bahut chhota hoga toh context adhoora rahega. Bahut bada hoga toh irrelevant text bhi aa jayega aur tokens waste honge. Shuruaat ke liye 500 se 1000 characters aur 10-15% overlap ek accha default hai.',
+      },
+      {
+        id: 'code-chunk',
+        type: 'code',
+        language: 'javascript',
+        filename: 'chunk.js',
+        code: "export function chunkText(text, size = 800, overlap = 100) {\n  if (overlap >= size) throw new Error('overlap must be smaller than size');\n  const chunks = [];\n  for (let start = 0; start < text.length; start += size - overlap) {\n    chunks.push(text.slice(start, start + size));\n    if (start + size >= text.length) break;\n  }\n  return chunks;\n}\n\nconsole.log(chunkText('a'.repeat(2000)).map((c) => c.length)); // [800, 800, 600]",
+      },
+      {
+        id: 'tip-overlap',
+        type: 'callout',
+        variant: 'tip',
+        title: 'Overlap ka fayda',
+        text: 'Agar ek important sentence do chunks ke beech mein kat jaye, toh overlap ki wajah se woh kam se kam ek chunk mein poora milega.',
+      },
+      { id: 'embeddings', type: 'heading', text: 'Embeddings kya hote hain?' },
+      {
+        id: 'p-emb',
+        type: 'paragraph',
+        text: 'Embedding ek list of numbers (vector) hai jo text ka **meaning** represent karta hai. "Docker container band karo" aur "stop the docker container" ke vectors ek dusre ke bahut paas honge, bhale hi words alag hain.',
+      },
+      {
+        id: 'code-cosine',
+        type: 'code',
+        language: 'javascript',
+        filename: 'similarity.js',
+        code: 'export function cosineSimilarity(a, b) {\n  let dot = 0, normA = 0, normB = 0;\n  for (let i = 0; i < a.length; i++) {\n    dot += a[i] * b[i];\n    normA += a[i] * a[i];\n    normB += b[i] * b[i];\n  }\n  return dot / (Math.sqrt(normA) * Math.sqrt(normB));\n}\n\nconsole.log(cosineSimilarity([1, 0], [1, 0])); // 1 (same direction)\nconsole.log(cosineSimilarity([1, 0], [0, 1])); // 0 (unrelated)',
+      },
+      {
+        id: 'flow',
+        type: 'diagram',
+        title: 'Indexing pipeline',
+        direction: 'horizontal',
+        nodes: [
+          { id: 'doc', label: 'Document', tone: 'neutral' },
+          { id: 'chunks', label: 'Chunks', tone: 'secondary' },
+          { id: 'vectors', label: 'Embeddings', tone: 'primary' },
+          { id: 'store', label: 'Vector store', tone: 'success' },
+        ],
+        edges: [
+          { from: 'doc', to: 'chunks', label: 'split' },
+          { from: 'chunks', to: 'vectors', label: 'embed' },
+          { from: 'vectors', to: 'store', label: 'save + metadata' },
+        ],
+      },
+      {
+        id: 'info-meta',
+        type: 'callout',
+        variant: 'info',
+        text: 'Har chunk ke saath metadata bhi save karo: source document, section, language, version. Baad mein filtering aur citations ke liye yahi kaam aata hai.',
+      },
+      {
+        id: 'quiz',
+        type: 'quiz',
+        question: 'Chunks ke beech overlap rakhne ka main reason kya hai?',
+        options: [
+          { id: 'a', text: 'Storage bachane ke liye' },
+          { id: 'b', text: 'Boundary pe kata hua context kisi ek chunk mein poora rahe' },
+          { id: 'c', text: 'Embeddings fast banane ke liye' },
+        ],
+        correctOptionIds: ['b'],
+        explanation:
+          'Overlap se important sentences chunk boundaries pe lost nahi hote. Storage thoda badhta hai, ghatta nahi.',
+      },
+    ],
+  },
+  {
+    slug: 'rag-pipeline-nodejs',
+    title: 'Build a minimal RAG pipeline in Node.js',
+    summary:
+      'Index a few documents with OpenAI embeddings, retrieve the top matches with cosine similarity, and generate a grounded answer — in about 60 lines.',
+    technology: 'rag',
+    tags: ['rag', 'nodejs', 'openai'],
+    difficulty: 'intermediate',
+    language: 'en',
+    blocks: [
+      { id: 'goal', type: 'heading', text: 'What we are building' },
+      {
+        id: 'p-goal',
+        type: 'paragraph',
+        text: 'An in-memory RAG pipeline: no vector database yet, just arrays. This makes every step visible. Swapping the array for a real vector store later only changes the `search` function.',
+      },
+      {
+        id: 'info-key',
+        type: 'callout',
+        variant: 'info',
+        text: 'This lesson calls the OpenAI API from your own machine. Set OPENAI_API_KEY in your shell; never commit keys or ship them inside a mobile app.',
+      },
+      {
+        id: 'code-install',
+        type: 'code',
+        language: 'bash',
+        code: 'npm init -y && npm pkg set type=module\nnpm install openai\nexport OPENAI_API_KEY=sk-...   # PowerShell: $env:OPENAI_API_KEY="sk-..."',
+      },
+      { id: 'index-h', type: 'heading', text: 'Step 1: Index' },
+      {
+        id: 'code-index',
+        type: 'code',
+        language: 'javascript',
+        filename: 'rag.js',
+        code: "import OpenAI from 'openai';\n\nconst client = new OpenAI();\nconst EMBEDDING_MODEL = 'text-embedding-3-small';\n\nconst docs = [\n  { id: 'refunds', text: 'Refunds are available within 30 days of purchase with a receipt.' },\n  { id: 'shipping', text: 'Standard shipping takes 3-5 business days within India.' },\n  { id: 'support', text: 'Support is available Monday to Friday, 9am to 6pm IST.' },\n];\n\nasync function embed(texts) {\n  const res = await client.embeddings.create({ model: EMBEDDING_MODEL, input: texts });\n  return res.data.map((d) => d.embedding);\n}\n\nconst vectors = await embed(docs.map((d) => d.text));\nconst index = docs.map((doc, i) => ({ ...doc, vector: vectors[i] }));",
+      },
+      { id: 'search-h', type: 'heading', text: 'Step 2: Retrieve' },
+      {
+        id: 'code-search',
+        type: 'code',
+        language: 'javascript',
+        code: 'function cosine(a, b) {\n  let dot = 0, na = 0, nb = 0;\n  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] ** 2; nb += b[i] ** 2; }\n  return dot / (Math.sqrt(na) * Math.sqrt(nb));\n}\n\nasync function search(question, k = 2) {\n  const [q] = await embed([question]);\n  return index\n    .map((item) => ({ ...item, score: cosine(q, item.vector) }))\n    .sort((a, b) => b.score - a.score)\n    .slice(0, k);\n}',
+      },
+      { id: 'gen-h', type: 'heading', text: 'Step 3: Generate a grounded answer' },
+      {
+        id: 'code-gen',
+        type: 'code',
+        language: 'javascript',
+        code: "async function answer(question) {\n  const hits = await search(question);\n  const context = hits.map((h, i) => `[${i + 1}] ${h.text}`).join('\\n');\n  const completion = await client.chat.completions.create({\n    model: 'gpt-4o-mini', // use any chat model available to your account\n    messages: [\n      { role: 'system', content: 'Answer only from the context. Cite sources like [1]. If unsure, say you do not know.' },\n      { role: 'user', content: `Context:\\n${context}\\n\\nQuestion: ${question}` },\n    ],\n  });\n  return completion.choices[0].message.content;\n}\n\nconsole.log(await answer('How long do I have to return an item?'));",
+      },
+      {
+        id: 'tip-next',
+        type: 'callout',
+        variant: 'tip',
+        title: 'Next steps',
+        text: 'Persist vectors in a vector database, cache embeddings, add metadata filters (language, product), and build a small evaluation set of questions with known answers.',
+      },
+      {
+        id: 'quiz',
+        type: 'quiz',
+        question:
+          'If you replace the in-memory array with a vector database, which function changes the most?',
+        options: [
+          { id: 'search', text: 'search()' },
+          { id: 'answer', text: 'answer()' },
+          { id: 'cosine', text: 'Nothing changes' },
+        ],
+        correctOptionIds: ['search'],
+        explanation:
+          'Retrieval moves into the database (it computes similarity for you), so search() changes. answer() still receives hits and builds the prompt.',
+      },
+    ],
+  },
+  {
+    slug: 'openai-tool-calling',
+    title: 'OpenAI tool calling from Node.js',
+    summary:
+      'Let the model decide when to call your functions. Define a tool schema, execute the call yourself, and send the result back for a final answer.',
+    technology: 'openai',
+    tags: ['openai', 'tool-calling', 'nodejs'],
+    difficulty: 'intermediate',
+    language: 'en',
+    blocks: [
+      { id: 'idea', type: 'heading', text: 'The model asks, your code acts' },
+      {
+        id: 'p-idea',
+        type: 'paragraph',
+        text: 'With tool calling, the model never runs code itself. It returns a structured request ("call `get_weather` with `{ city: \'Pune\' }`"). Your application validates it, runs the real function and sends the result back.',
+      },
+      {
+        id: 'loop',
+        type: 'diagram',
+        title: 'Tool-calling round trip',
+        direction: 'vertical',
+        nodes: [
+          { id: 'req', label: 'Request + tool schemas', tone: 'neutral' },
+          { id: 'model1', label: 'Model returns tool_calls', tone: 'primary' },
+          { id: 'exec', label: 'Your code runs the function', tone: 'success' },
+          { id: 'model2', label: 'Model writes final answer', tone: 'primary' },
+        ],
+        edges: [
+          { from: 'req', to: 'model1' },
+          { from: 'model1', to: 'exec', label: 'name + JSON args' },
+          { from: 'exec', to: 'model2', label: 'role: tool' },
+        ],
+      },
+      { id: 'define', type: 'heading', text: 'Define a tool' },
+      {
+        id: 'code-tools',
+        type: 'code',
+        language: 'javascript',
+        filename: 'tools.js',
+        code: "export const tools = [\n  {\n    type: 'function',\n    function: {\n      name: 'get_weather',\n      description: 'Get the current temperature in Celsius for a city',\n      parameters: {\n        type: 'object',\n        properties: { city: { type: 'string', description: 'City name, e.g. Pune' } },\n        required: ['city'],\n        additionalProperties: false,\n      },\n      strict: true,\n    },\n  },\n];\n\nexport async function getWeather(city) {\n  // Call a real weather API here.\n  return { city, temperatureC: 31 };\n}",
+      },
+      { id: 'run', type: 'heading', text: 'Handle the call' },
+      {
+        id: 'code-run',
+        type: 'code',
+        language: 'javascript',
+        filename: 'main.js',
+        code: "import OpenAI from 'openai';\nimport { tools, getWeather } from './tools.js';\n\nconst client = new OpenAI();\nconst model = 'gpt-4o-mini';\nconst messages = [{ role: 'user', content: 'Is it hot in Pune right now?' }];\n\nconst first = await client.chat.completions.create({ model, messages, tools });\nconst reply = first.choices[0].message;\n\nif (reply.tool_calls?.length) {\n  messages.push(reply);\n  for (const call of reply.tool_calls) {\n    const args = JSON.parse(call.function.arguments);\n    const result = call.function.name === 'get_weather' ? await getWeather(args.city) : { error: 'unknown tool' };\n    messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) });\n  }\n  const final = await client.chat.completions.create({ model, messages, tools });\n  console.log(final.choices[0].message.content);\n} else {\n  console.log(reply.content);\n}",
+      },
+      {
+        id: 'warn-validate',
+        type: 'callout',
+        variant: 'warning',
+        title: 'Treat arguments as untrusted input',
+        text: 'Validate tool arguments like any user input, enforce permissions in your code, and ask for confirmation before irreversible actions such as payments or deletes.',
+      },
+      {
+        id: 'quiz',
+        type: 'quiz',
+        question: 'Who executes the function when the model returns a tool call?',
+        options: [
+          { id: 'a', text: 'OpenAI servers' },
+          { id: 'b', text: 'Your application code' },
+          { id: 'c', text: 'The browser automatically' },
+        ],
+        correctOptionIds: ['b'],
+        explanation:
+          'The model only proposes a call. Your application decides whether to run it, executes it, and returns the result as a "tool" message.',
+      },
+    ],
+  },
+  {
+    slug: 'ai-agent-loop-hinglish',
+    title: 'AI Agent ka loop: Socho, karo, dekho',
+    summary:
+      'Agent ek LLM hai jo loop mein tools use karta hai jab tak goal poora na ho. Samjho loop, stopping conditions aur guardrails.',
+    technology: 'ai-agents',
+    tags: ['ai-agents', 'tool-calling', 'orchestration'],
+    difficulty: 'intermediate',
+    language: 'hinglish',
+    blocks: [
+      { id: 'what', type: 'heading', text: 'Agent asal mein kya hai?' },
+      {
+        id: 'p-what',
+        type: 'paragraph',
+        text: 'Simple chatbot ek sawaal ka ek jawab deta hai. **Agent** ek goal leta hai aur khud decide karta hai ki kaunsa tool kab call karna hai, result dekhta hai, aur phir agla step leta hai.',
+      },
+      {
+        id: 'loop',
+        type: 'diagram',
+        title: 'Agent loop',
+        direction: 'horizontal',
+        nodes: [
+          { id: 'think', label: 'Socho', description: 'Next step plan', tone: 'primary' },
+          { id: 'act', label: 'Karo', description: 'Tool call', tone: 'success' },
+          { id: 'observe', label: 'Dekho', description: 'Result padho', tone: 'secondary' },
+        ],
+        edges: [
+          { from: 'think', to: 'act' },
+          { from: 'act', to: 'observe' },
+          { from: 'observe', to: 'think', label: 'repeat' },
+        ],
+      },
+      {
+        id: 'code-loop',
+        type: 'code',
+        language: 'javascript',
+        filename: 'agent.js',
+        code: "const MAX_STEPS = 6;\n\nexport async function runAgent(goal, { callModel, tools }) {\n  const messages = [{ role: 'user', content: goal }];\n  for (let step = 1; step <= MAX_STEPS; step++) {\n    const reply = await callModel(messages, Object.values(tools).map((t) => t.schema));\n    messages.push(reply);\n\n    if (!reply.tool_calls?.length) return reply.content; // goal poora\n\n    for (const call of reply.tool_calls) {\n      const tool = tools[call.function.name];\n      const output = tool\n        ? await tool.run(JSON.parse(call.function.arguments))\n        : { error: `Unknown tool ${call.function.name}` };\n      messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(output) });\n    }\n  }\n  return 'Step limit reached — task adhoora hai, human review chahiye.';\n}",
+      },
+      {
+        id: 'warn-limit',
+        type: 'callout',
+        variant: 'warning',
+        title: 'Hamesha limit lagao',
+        text: 'Bina MAX_STEPS ke agent infinite loop mein ja sakta hai aur API bill bhi badha sakta hai. Time aur cost budget dono set karo.',
+      },
+      { id: 'guard', type: 'heading', text: 'Guardrails' },
+      {
+        id: 'p-guard',
+        type: 'paragraph',
+        text: 'Tools ko minimum permissions do, destructive actions se pehle user confirmation lo, aur har step log karo taaki baad mein debug kar sako ki agent ne kya socha aur kya kiya.',
+      },
+      {
+        id: 'tip-single',
+        type: 'callout',
+        variant: 'tip',
+        text: 'Shuruaat ek single agent aur 2-3 achhe tools se karo. Multi-agent orchestration tabhi lao jab ek agent ka kaam sach mein bahut bada ho jaye.',
+      },
+      {
+        id: 'quiz',
+        type: 'quiz',
+        question: 'Upar wale loop mein agent kab rukta hai? (Sab sahi options chuno)',
+        options: [
+          { id: 'a', text: 'Jab model koi tool call return nahi karta' },
+          { id: 'b', text: 'Jab MAX_STEPS poore ho jaate hain' },
+          { id: 'c', text: 'Har tool call ke turant baad' },
+        ],
+        correctOptionIds: ['a', 'b'],
+        explanation:
+          'Final text answer aane par loop return karta hai, aur safety ke liye step limit pe bhi ruk jata hai. Tool call ke baad loop continue hota hai.',
+      },
+    ],
+  },
+];

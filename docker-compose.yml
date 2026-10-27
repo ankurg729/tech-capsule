@@ -1,0 +1,23 @@
+# Local infrastructure for development. Only MongoDB is required in Phase 1.
+#   docker compose up -d        # start
+#   docker compose down         # stop (data is kept in the named volume)
+#   docker compose down -v      # stop and delete all local data
+services:
+  mongo:
+    image: mongo:8.0
+    container_name: techcapsule-mongo
+    restart: unless-stopped
+    # Bound to localhost only; set MONGO_PORT if 27017 is already used by a local mongod.
+    ports:
+      - '127.0.0.1:${MONGO_PORT:-27017}:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+volumes:
+  mongo-data:
